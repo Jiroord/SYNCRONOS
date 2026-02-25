@@ -1,8 +1,6 @@
-// syncronos-server/src/routes/sync.js
-const express = require("express");
-const router = express.Router();
-const { getMatches } = require("../controllers/syncController");
+const router = require("express").Router();
+const controller = require("../controllers/syncController");
 
-router.get("/:userId", getMatches);
+router.get("/:userId", controller.findMatches);
 
 module.exports = router;

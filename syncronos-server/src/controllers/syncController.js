@@ -1,28 +1,30 @@
-// syncronos-server/src/controllers/syncController.js
-const { getAllUsers } = require("../models/userModel");
-const { getZodiacSign, calculateCompatibility } = require("../utils/zodiac");
+const pool = require("../models/db");
 
-const getMatches = async (req, res) => {
-  const { userId } = req.params;
-  const users = await getAllUsers();
-
-  const currentUser = users.find(u => u.id == userId);
-  const [year, month, day] = currentUser.birthdate.split("-");
-
-  const userSign = getZodiacSign(parseInt(day), parseInt(month));
-
-  const matches = users
-    .filter(u => u.id != userId)
-    .map(u => {
-      const [y, m, d] = u.birthdate.split("-");
-      const sign = getZodiacSign(parseInt(d), parseInt(m));
-      const score = calculateCompatibility(userSign, sign);
-
-      return { ...u, compatibility: score };
-    })
-    .sort((a, b) => b.compatibility - a.compatibility);
-
-  res.json(matches);
+const compatibility = {
+    Aries: ["Leo", "Sagitario"],
+    Tauro: ["Virgo", "Capricornio"],
+    Geminis: ["Libra", "Acuario"],
+    Cancer: ["Escorpio", "Piscis"],
+    Leo: ["Aries", "Sagitario"],
+    Virgo: ["Tauro", "Capricornio"],
+    Libra: ["Geminis", "Acuario"],
+    Escorpio: ["Cancer", "Piscis"],
+    Sagitario: ["Aries", "Leo"],
+    Capricornio: ["Tauro", "Virgo"],
+    Acuario: ["Geminis", "Libra"],
+    Piscis: ["Cancer", "Escorpio"],
 };
 
-module.exports = { getMatches };
+exports.findMatches = async (req, res) => {
+    const { userId } = req.params;
+
+    const user = await pool.query("SELECT * FROM users WHERE id=$1", [userId]);
+    const mySign = user.rows[0].zodiac;
+
+    const matches = await pool.query(
+        "SELECT * FROM users WHERE zodiac = ANY($1) AND id != $2",
+        [compatibility[mySign], userId]
+    );
+
+    res.json(matches.rows);
+};
